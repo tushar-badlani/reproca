@@ -1,0 +1,64 @@
+[project]
+name            = "backend"
+version         = "0.1.0"
+description     = "Add your description here"
+authors         = [{ name = "aspizu", email = "aspizu@protonmail.com" }]
+dependencies    = ["reproca @ file:///home/aspizu/Documents/Projects/reproca"]
+readme          = "README.md"
+requires-python = ">= 3.12"
+
+[build-system]
+requires      = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.rye]
+managed          = true
+dev-dependencies = []
+
+[tool.hatch.metadata]
+allow-direct-references = true
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/backend"]
+
+[tool.rye.scripts]
+dev = { cmd = "uvicorn src.backend:app --reload" }
+dry = { call = "src.backend:dry" }
+
+[tool.pyright]
+typeCheckingMode                   = "strict"
+reportUnnecessaryTypeIgnoreComment = true
+reportUnknownVariableType          = false
+reportUnknownMemberType            = false
+reportUnknownArgumentType          = false
+reportMissingModuleSource          = false
+reportMissingTypeStubs             = false
+reportWildcardImportFromLibrary    = false
+
+[tool.ruff.lint]
+select = ["ALL"]
+extend-safe-fixes = ["ALL"]
+extend-unsafe-fixes = ["T201", 'TCH003']
+unfixable = []
+ignore = [
+    "W191",
+    "E111",
+    "E114",
+    "E117",
+    "D206",
+    "D300",
+    "Q000",
+    "Q001",
+    "Q002",
+    "Q003",
+    "COM812",
+    "COM819",
+    "ISC001",
+    "ISC002",
+    "ANN101",
+    "SLF001",
+    "E402",
+]
+
+[tool.ruff.format]
+docstring-code-format = true

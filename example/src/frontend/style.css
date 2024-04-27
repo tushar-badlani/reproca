@@ -1,0 +1,130 @@
+.app {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    padding: 1rem;
+    background: hsl(0, 0%, 0%);
+    color: hsl(0, 0%, 100%);
+    min-height: 100vh;
+}
+
+.todo-input {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.todo-input__create {
+    place-self: start;
+}
+
+.button {
+    background: hsl(0, 0%, 36%);
+    border: none;
+    border-radius: 0.3rem;
+    padding: 0.25rem 1rem;
+    color: hsl(0, 0%, 100%);
+    font-weight: 500;
+    transition: background 100ms;
+
+    &:hover {
+        background: hsl(0, 0%, 46%);
+    }
+
+    &:active {
+        background: hsl(0, 0%, 56%);
+    }
+
+    &:focus-visible {
+        outline: 0.2rem solid hsl(0, 0%, 100%);
+    }
+}
+
+.todo-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.todo {
+    display: flex;
+    gap: 1rem;
+    background: hsl(0, 0%, 7%);
+    border: 0.1rem solid hsl(0, 0%, 9%);
+    border-radius: 0.3rem;
+    padding: 1rem;
+}
+
+.todo__delete {
+    place-self: center;
+}
+
+.todo__details {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.todo__title {
+    font-weight: 600;
+    font-size: 1.2rem;
+    line-height: 0.95;
+}
+
+.todo__description {
+    color: hsl(0, 0%, 77%);
+}
+
+.input {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+
+    &:focus-within .input__label {
+        color: hsl(0, 0%, 100%);
+    }
+}
+
+.input__label {
+    font-weight: 600;
+    color: hsl(0, 0%, 82%);
+    user-select: none;
+}
+
+.input__inner {
+    color: hsl(0, 0%, 100%);
+    background: hsl(0, 0%, 0%);
+    border: 0.1rem solid hsl(0, 0%, 26%);
+    border-radius: 0.3rem;
+    padding: 0.5rem;
+
+    &:hover {
+        border-color: hsl(0, 0%, 38%);
+    }
+
+    &:focus {
+        border-color: hsl(0, 0%, 100%);
+        outline: none;
+    }
+}
+
+.textarea {
+    color: hsl(0, 0%, 100%);
+    background: hsl(0, 0%, 0%);
+    border-radius: 0.3rem;
+    border: 0.1rem solid hsl(0, 0%, 26%);
+    padding: 0.5rem;
+    resize: none;
+    min-height: calc(var(--lines) + 1.2rem);
+    overflow: hidden;
+    transition: min-height 100ms;
+
+    &:hover {
+        border-color: hsl(0, 0%, 38%);
+    }
+
+    &:focus {
+        border-color: hsl(0, 0%, 100%);
+        outline: none;
+    }
+}

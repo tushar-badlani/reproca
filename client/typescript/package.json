@@ -1,0 +1,17 @@
+{
+    "name": "reproca",
+    "module": "src/index.ts",
+    "type": "module",
+    "scripts": {
+        "build": "bunx --bun tsc"
+    },
+    "peerDependencies": {},
+    "exports": {
+        ".": {
+            "import": "./dist/index.js"
+        },
+        "./*": {
+            "import": "./dist/*.js"
+        }
+    }
+}
