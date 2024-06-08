@@ -54,7 +54,7 @@ def method[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]
 def rate_limit(limit: int):  # noqa: ANN201
     """Set the rate limit in seconds for a method.
 
-    Rate limiting is per session.
+    Rate limiting is per IP address.
 
     Args:
     ----
