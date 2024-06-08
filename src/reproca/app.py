@@ -17,6 +17,7 @@ from .asgi.types import (
     WebSocketReceiveEvent,
 )
 from .credentials import Credentials
+from .memcache import Memcache
 from .method import methods
 from .sessions import Sessions
 
@@ -46,7 +47,12 @@ async def send_response(body: bytes, send: ASGISendCallable) -> None:
 
 
 class App[T, U]:
-    def __init__(self, sessions: Sessions[T, U]) -> None:
+    def __init__(
+        self,
+        sessions: Sessions[T, U],
+        memcache: Memcache,
+    ) -> None:
+        self.memcache = memcache
         self.sessions = sessions
 
     async def __call__(
@@ -88,7 +94,6 @@ class App[T, U]:
         ]
         assert scope["client"] is not None
         address = scope["client"][0]
-        port = scope["client"][1]
         try:
             method = methods[scope["path"]]
         except KeyError:
@@ -97,7 +102,7 @@ class App[T, U]:
             )
             await send_response(b"Method does not exist", send)
             return
-        if method.rate_limit > 0 and self.sessions.rate_limit(
+        if method.rate_limit > 0 and self.memcache.rate_limit(
             address, scope["path"], method.rate_limit
         ):
             await send_response_header(
