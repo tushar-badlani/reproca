@@ -21,5 +21,7 @@ msgspec==0.18.6
     # via reproca
 pygments==2.17.2
     # via rich
+pymemcache==4.0.0
+    # via reproca
 rich==13.7.1
 uvicorn==0.29.0

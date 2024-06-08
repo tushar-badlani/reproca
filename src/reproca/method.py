@@ -12,6 +12,7 @@ class Method(msgspec.Struct):
     decoder: msgspec.json.Decoder[Any]
     type_hints: dict[str, Any]
     parameter_session_optional: bool
+    rate_limit: int = 0
 
 
 methods: dict[str, Method] = {}
@@ -48,3 +49,25 @@ def method[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]
         parameter_session_optional=parameter_session_optional,
     )
     return func
+
+
+def rate_limit(limit: int):  # noqa: ANN201
+    """Set the rate limit in seconds for a method.
+
+    Rate limiting is per session.
+
+    Args:
+    ----
+        limit: The rate limit in seconds.
+
+    """
+
+    def decorator[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+        method = methods[f"/{func.__name__}"]
+        if method.parameter_session_optional:
+            msg = "Rate limiting requires authentication."
+            raise ValueError(msg)
+        method.rate_limit = limit
+        return func
+
+    return decorator

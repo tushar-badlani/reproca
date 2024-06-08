@@ -11,3 +11,5 @@
 -e file:.
 msgspec==0.18.6
     # via reproca
+pymemcache==4.0.0
+    # via reproca

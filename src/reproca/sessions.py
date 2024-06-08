@@ -2,14 +2,14 @@
 
 from __future__ import annotations
 
-__all__ = ["SESSION_VALID_FOR_DAYS", "Sessions"]
+__all__ = ["Sessions"]
 
 import secrets
 from datetime import UTC, datetime
 
 import msgspec
-
-SESSION_VALID_FOR_DAYS = 15
+import pymemcache.client.base
+from pymemcache import serde
 
 
 class Session[T, U](msgspec.Struct):
@@ -17,14 +17,19 @@ class Session[T, U](msgspec.Struct):
     user: U
     created: datetime
 
-    def is_expired(self) -> bool:
-        return (datetime.now(tz=UTC) - self.created).days > SESSION_VALID_FOR_DAYS
-
 
 class Sessions[T, U]:
-    def __init__(self) -> None:
-        self.sessions: dict[str, Session[T, U]] = {}
-        self.users: dict[T, str] = {}
+    def __init__(self, server: tuple[str, int] | str, expire: int = 2592000) -> None:
+        """Initialize a sessions manager (Implemented using memcached).
+
+        Args:
+        ----
+            server: The memcached server address.
+            expire: The expiration time of a session in seconds.
+
+        """
+        self.client = pymemcache.client.base.Client(server, serde=serde.pickle_serde)
+        self.expire = expire
 
     def create(self, userid: T, user: U) -> str:
         """Create a session for user by user id.
@@ -34,61 +39,72 @@ class Sessions[T, U]:
         """
         self.remove_by_userid(userid)
         sessionid = secrets.token_urlsafe()
-        self.users[userid] = sessionid
-        self.sessions[sessionid] = Session(userid, user, datetime.now(tz=UTC))
+        self.client.set(
+            f"sessionid={sessionid}",
+            Session(userid, user, datetime.now(tz=UTC)),
+            expire=self.expire,
+        )
+        self.client.set(f"userid={userid}", sessionid)
         return sessionid
+
+    def update_by_sessionid(self, sessionid: str, user: U) -> None:
+        """Update a session by session id."""
+        session: Session[T, U] | None = self.client.get(f"sessionid={sessionid}")
+        if session is None:
+            return
+        self.client.replace(
+            f"sessionid={sessionid}",
+            Session(session.userid, user, session.created),
+            expire=int(
+                self.expire - (datetime.now(tz=UTC) - session.created).total_seconds()
+            ),
+        )
 
     def remove_by_userid(self, userid: T) -> None:
         """Remove a session by user id."""
-        try:
-            sessionid = self.users.pop(userid)
-            self.sessions.pop(sessionid)
-        except KeyError:
-            pass
+        sessionid: str | None = self.client.get(f"userid={userid}")
+        if sessionid is None:
+            return
+        self.client.delete_many((f"sessionid={sessionid}", f"userid={userid}"))
 
     def remove_by_sessionid(self, sessionid: str) -> None:
         """Remove a session by session id."""
-        try:
-            session = self.sessions.pop(sessionid)
-            self.users.pop(session.userid)
-        except KeyError:
-            pass
+        session: Session[T, U] | None = self.client.get(f"sessionid={sessionid}")
+        if session is None:
+            return
+        self.client.delete_many((f"sessionid={sessionid}", f"userid={session.userid}"))
 
     def get_by_userid[D](self, userid: T, default: D = None) -> U | D:
         """Get user by user id, return default if not found."""
-        if sessionid := self.users.get(userid):
-            if session := self.sessions.get(sessionid):
-                if session.is_expired():
-                    self.remove_by_sessionid(sessionid)
-                    return default
-                return session.user
-        return default
+        sessionid: str | None = self.client.get(f"userid={userid}")
+        if sessionid is None:
+            return default
+        session: Session[T, U] | None = self.client.get(f"sessionid={sessionid}")
+        if session is None:
+            return default
+        return session.user
 
     def get_by_sessionid[D](self, sessionid: str, default: D = None) -> U | D:
         """Get user by session id, return default if not found."""
-        if session := self.sessions.get(sessionid):
-            if session.is_expired():
-                self.remove_by_sessionid(sessionid)
-                return default
-            return session.user
-        return default
+        session: Session[T, U] | None = self.client.get(f"sessionid={sessionid}")
+        if session is None:
+            return default
+        return session.user
 
-    def clean_up(self) -> None:
-        for sessionid, session in self.sessions.items():
-            if session.is_expired():
-                self.remove_by_sessionid(sessionid)
+    def rate_limit(self, accessor: str, resource: str, rate: int) -> bool:
+        """Rate limit an accessor for a resource.
 
-    def __len__(self) -> int:
-        """Return the number of active sessions."""
-        return len(self.sessions)
+        Returns True if the accessor is NOT allowed to access the resource.
 
-    def __contains__(self, userid: T) -> bool:
-        """Check if a user has an active session."""
-        if (sessionid := self.users.get(userid)) and (
-            session := self.sessions.get(sessionid)
-        ):
-            if session.is_expired():
-                self.remove_by_userid(userid)
-                return False
+        Args:
+        ----
+            accessor: The accessor to rate limit.
+            resource: The resource to rate limit.
+            rate: The rate limit in seconds.
+
+        """
+        lock = self.client.get(f"accessor={accessor};resource={resource}")
+        if lock:
             return True
+        self.client.set(f"accessor={accessor};resource={resource}", True, expire=rate)
         return False

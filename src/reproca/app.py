@@ -86,6 +86,9 @@ class App[T, U]:
             (b"Access-Control-Allow-Credentials", b"true"),
             (b"Content-Type", b"application/json"),
         ]
+        assert scope["client"] is not None
+        address = scope["client"][0]
+        port = scope["client"][1]
         try:
             method = methods[scope["path"]]
         except KeyError:
@@ -93,6 +96,14 @@ class App[T, U]:
                 HTTPStatus.BAD_REQUEST, send, headers=response_headers
             )
             await send_response(b"Method does not exist", send)
+            return
+        if method.rate_limit > 0 and self.sessions.rate_limit(
+            address, scope["path"], method.rate_limit
+        ):
+            await send_response_header(
+                HTTPStatus.TOO_MANY_REQUESTS, send, headers=response_headers
+            )
+            await send_response(b"Rate limit exceeded", send)
             return
         try:
             parameters = method.decoder.decode(event["body"])
