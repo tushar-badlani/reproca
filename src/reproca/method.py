@@ -26,7 +26,7 @@ def snake_to_pascal(snake: str) -> str:
 SPECIAL_PARAMETERS = ["return", "session", "credentials"]
 
 
-def method[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
+def method[**P, R](func: Callable[P, Awaitable[R]], rate_limit : int) -> Callable[P, Awaitable[R]]:
     type_hints = get_type_hints(func)
     type_ = msgspec.defstruct(
         snake_to_pascal(func.__name__) + "Parameters",
@@ -41,33 +41,14 @@ def method[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]
     parameter_session_optional = False
     if (obj := type_hints.get("session")) and get_origin(obj) is UnionType:
         parameter_session_optional = True
+
+    # Add rate_limit to Method object
     methods[f"/{func.__name__}"] = Method(
         implementation=func,
         type=type_,
         decoder=msgspec.json.Decoder(type=type_),
         type_hints=type_hints,
         parameter_session_optional=parameter_session_optional,
+        rate_limit=rate_limit,
     )
     return func
-
-
-def rate_limit(limit: int):  # noqa: ANN201
-    """Set the rate limit in seconds for a method.
-
-    Rate limiting is per IP address.
-
-    Args:
-    ----
-        limit: The rate limit in seconds.
-
-    """
-
-    def decorator[**P, R](func: Callable[P, Awaitable[R]]) -> Callable[P, Awaitable[R]]:
-        method = methods[f"/{func.__name__}"]
-        if method.parameter_session_optional:
-            msg = "Rate limiting requires authentication."
-            raise ValueError(msg)
-        method.rate_limit = limit
-        return func
-
-    return decorator
